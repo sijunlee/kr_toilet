@@ -1,0 +1,159 @@
+apply plugin: 'java'
+apply plugin: 'gradle-one-jar'
+apply plugin: 'application'
+apply plugin: 'idea'
+
+
+// Use Java 8 by default
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+// The main class of the application
+mainClassName = 'com.example.ExampleApplication'
+
+// Add Gradle OneJar Plugin, see https://github.com/rholder/gradle-one-jar
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
+        // Jooq
+        classpath 'org.jooq:jooq-codegen:3.6.3'
+        // Postgres
+        classpath 'postgresql:postgresql:9.1-901.jdbc4'
+
+    }
+}
+
+//Set project variables
+project.ext {
+    dropwizardVersion = '1.0.5'
+    dropwizardJava8Version = '0.9.0-1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'io.dropwizard:dropwizard-core:' + dropwizardVersion
+    compile 'io.dropwizard.modules:dropwizard-java8:' + dropwizardJava8Version
+
+    // Postgres JDBC driver
+    compile 'postgresql:postgresql:9.1-901.jdbc4'
+    compile 'org.postgis:postgis-jdbc:1.3.3'
+    compile 'com.vividsolutions:jts:1.12'
+    // Apache Common pool
+    compile 'org.apache.commons:commons-pool2:2.2'
+
+
+    // jOOQ for sql queries
+    compile 'org.jooq:jooq:3.6.3'
+    compile 'org.jooq:jooq-codegen:3.6.3'
+    compile 'org.jooq:jooq-meta:3.6.3'
+    compile 'org.jooq:jool:0.9.4'
+
+
+    // Locale needs to handle distance unit.
+    compile 'com.ibm.icu:icu4j:58.1'
+
+    testCompile 'io.dropwizard:dropwizard-testing:' + dropwizardVersion
+
+}
+
+// Configure the oneJar task
+task oneJar(type: OneJar) {
+    mainClass = mainClassName
+}
+
+// Configure the run task to start the Dropwizard service
+run {
+    args 'server', './config.yml'
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.14'
+}
+
+artifacts {
+    oneJar
+}
+
+
+//=============================================================================
+// Jooq
+//=============================================================================
+
+// Configuration of Jooq code generation, used by generateJooq task.
+// We eval this immediately to catch buildfile errors.
+// Based on: https://github.com/jOOQ/jOOQ/tree/master/jOOQ-examples/jOOQ-codegen-gradle
+def jooqWriter = new StringWriter()
+new groovy.xml.MarkupBuilder(jooqWriter)
+        .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.6.0.xsd') {
+    jdbc() {
+        url('jdbc:postgresql://localhost:5432/kr_geo')
+        driver('org.postgresql.Driver')
+        user('postgres')
+    }
+    generator() {
+        database() {
+            name('org.jooq.util.postgres.PostgresDatabase')
+            includes('public.(toilet)')
+            schemata() {
+                schema() {
+                    inputSchema('public')
+                }
+            }
+            customTypes() {
+                customType() {
+                    name('Geometry')
+                    type('com.vividsolutions.jts.geom.Geometry')
+                    binding('com.samsung.bixby.utils.PostgresGeometryBinding')
+                }
+            }
+            forcedTypes() {
+                forcedType() {
+                    name('Geometry')
+                    expression('geometry')
+                    types('.*')
+                }
+            }
+        }
+        generate() {
+            deprecated('false')
+            records('false')
+        }
+        target() {
+            packageName('com.samsung.bixby.jooq')
+            directory(project.projectDir.absolutePath + '/gen/jooq')
+        }
+    }
+}
+// Regenerate the jOOQ database to POJO mapping.  The POJOs are now committed but are not intended to be modified by hand.
+task generateJooq() {
+    outputs.dir new File(project.projectDir.absolutePath, '/gen/jooq')
+    doFirst {
+        org.jooq.util.GenerationTool.generate(
+                javax.xml.bind.JAXB.unmarshal(new StringReader(jooqWriter.toString()), org.jooq.util.jaxb.Configuration.class)
+        )
+    }
+}
+//=============================================================================
+// Databases
+//=============================================================================
+task generateDB {
+        description = 'Run generate initial database from csv files'
+//    execute('cd src/script && ./init_db.sh')
+//    exec {
+//        commandLine 'cd $rootDir/src/script'
+//    }
+//    exec {
+//        commandLine './init_db.sh'
+//    }
+
+
+}

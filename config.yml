@@ -1,0 +1,22 @@
+server:
+  applicationConnectors:
+    - type: http
+      port: 8080
+
+  adminConnectors:
+    - type: http
+      port: 8081
+
+# Logging settings.
+logging:
+  level: INFO
+  loggers:
+    com.example.searchtoilet: DEBUG
+
+connect_string: localhost:5432
+db: kr_geo
+enable_logging: true
+row_limit: 10
+max_idle_connections: 10
+max_total_connections: 50
+postgres_user: postgres
