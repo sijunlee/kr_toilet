@@ -5,7 +5,7 @@ usage() {
     }
 
 db_user="postgres"
-db_name="kr_geo"
+db_name="postgres"
 
 my_dir=$(dirname $(readlink -f $0))
 
@@ -16,6 +16,7 @@ echo "db_name - ${db_name}"
 
 
 psql --single-transaction -e -U ${db_user} -d ${db_name} << EOT
+CREATE EXTENSION IF NOT EXISTS postgis;
 DROP TABLE IF EXISTS toilet;
 
 CREATE TABLE IF NOT EXISTS toilet (

@@ -1,3 +1,33 @@
+group 'search-toilet'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+// Add Gradle OneJar Plugin, see https://github.com/rholder/gradle-one-jar
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
+        // Jooq
+        classpath 'org.jooq:jooq-codegen:3.6.3'
+        // Postgres
+        classpath 'postgresql:postgresql:9.1-901.jdbc4'
+
+        // Add 'dependencyUpdates' task for reporting dependency version upgrades.
+        // https://github.com/ben-manes/gradle-versions-plugin
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
+
+        // Fat jar
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+    }
+}
+
 apply plugin: 'java'
 apply plugin: 'gradle-one-jar'
 apply plugin: 'application'
@@ -11,23 +41,14 @@ targetCompatibility = '1.8'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 // The main class of the application
-mainClassName = 'com.example.ExampleApplication'
+mainClassName = 'com.example.searchtoilet.MainApplication'
 
-// Add Gradle OneJar Plugin, see https://github.com/rholder/gradle-one-jar
-buildscript {
-    repositories {
-        mavenCentral()
-    }
 
-    dependencies {
-        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
-        // Jooq
-        classpath 'org.jooq:jooq-codegen:3.6.3'
-        // Postgres
-        classpath 'postgresql:postgresql:9.1-901.jdbc4'
 
-    }
-}
+// https://github.com/ben-manes/gradle-versions-plugin
+apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'com.github.johnrengelman.shadow'
+
 
 //Set project variables
 project.ext {
@@ -59,16 +80,16 @@ dependencies {
 
 
     // Locale needs to handle distance unit.
-    compile 'com.ibm.icu:icu4j:58.1'
+//    compile 'com.ibm.icu:icu4j:58.1'
 
     testCompile 'io.dropwizard:dropwizard-testing:' + dropwizardVersion
 
 }
 
 // Configure the oneJar task
-task oneJar(type: OneJar) {
-    mainClass = mainClassName
-}
+//task oneJar(type: OneJar) {
+//    mainClass = mainClassName
+//}
 
 // Configure the run task to start the Dropwizard service
 run {
@@ -79,11 +100,37 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.14'
 }
 
-artifacts {
-    oneJar
+//artifacts {
+//    oneJar
+//}
+
+//=============================================================================
+// Java
+//=============================================================================
+
+sourceSets {
+    main {
+        java {
+            srcDir project.projectDir.absolutePath + '/gen/jooq'
+        }
+    }
 }
 
+jar {
+    dependsOn configurations.runtime
+    // Avoid signature headaches.
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.DSA"
+}
 
+shadowJar {
+    manifest {
+        attributes "Main-Class": "com.example.searchtoilet.MainApplication"
+    }
+
+    mergeServiceFiles()
+    destinationDir project.buildDir
+}
 //=============================================================================
 // Jooq
 //=============================================================================
@@ -95,7 +142,7 @@ def jooqWriter = new StringWriter()
 new groovy.xml.MarkupBuilder(jooqWriter)
         .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.6.0.xsd') {
     jdbc() {
-        url('jdbc:postgresql://localhost:5432/kr_geo')
+        url('jdbc:postgresql://localhost:5432/postgres')
         driver('org.postgresql.Driver')
         user('postgres')
     }
@@ -112,7 +159,7 @@ new groovy.xml.MarkupBuilder(jooqWriter)
                 customType() {
                     name('Geometry')
                     type('com.vividsolutions.jts.geom.Geometry')
-                    binding('com.samsung.bixby.utils.PostgresGeometryBinding')
+                    binding('com.example.searchtoilet.utils.PostgresGeometryBinding')
                 }
             }
             forcedTypes() {
@@ -128,7 +175,7 @@ new groovy.xml.MarkupBuilder(jooqWriter)
             records('false')
         }
         target() {
-            packageName('com.samsung.bixby.jooq')
+            packageName('jooq.com.example.searchtoilet')
             directory(project.projectDir.absolutePath + '/gen/jooq')
         }
     }
@@ -146,7 +193,7 @@ task generateJooq() {
 // Databases
 //=============================================================================
 task generateDB {
-        description = 'Run generate initial database from csv files'
+    description = 'Run generate initial database from csv files'
 //    execute('cd src/script && ./init_db.sh')
 //    exec {
 //        commandLine 'cd $rootDir/src/script'

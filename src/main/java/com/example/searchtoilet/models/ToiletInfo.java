@@ -14,10 +14,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-import static com.example.searchtoilet.jooq.tables.Toilet.TOILET;
 import static com.example.searchtoilet.utils.GISHelper.calculateGeometry;
 import static com.example.searchtoilet.utils.PostgresUtils.*;
+import static jooq.com.example.searchtoilet.tables.Toilet.TOILET;
 import static org.jooq.impl.DSL.val;
+
 
 @JsonTypeName("ToiletInformation")
 public class ToiletInfo {

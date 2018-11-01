@@ -14,7 +14,7 @@ logging:
     com.example.searchtoilet: DEBUG
 
 connect_string: localhost:5432
-db: kr_geo
+db: postgres
 enable_logging: true
 row_limit: 10
 max_idle_connections: 10
