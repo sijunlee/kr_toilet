@@ -17,6 +17,7 @@ echo "db_name - ${db_name}"
 
 psql --single-transaction -e -U ${db_user} -d ${db_name} << EOT
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 DROP TABLE IF EXISTS toilet;
 
 CREATE TABLE IF NOT EXISTS toilet (
